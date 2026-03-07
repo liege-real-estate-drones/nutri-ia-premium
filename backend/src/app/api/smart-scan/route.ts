@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI, Part } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 // Prompt Système Strict pour le routeur multimodal
 const SYSTEM_PROMPT = `
@@ -6,7 +9,7 @@ Tu es le cerveau analytique de Nutri-IA Premium.
 Analyse l'image fournie et détermine de quel cas il s'agit.
 Retourne STRICTEMENT un objet JSON valide suivant l'un de ces deux schémas :
 
-CAS A (Mode Stats - Capture EGYM/BioAge) :
+CAS A (Mode Stats - Capture EGYM/BioAge ou balance connectée) :
 {
   "type": "stats",
   "data": {
@@ -17,16 +20,16 @@ CAS A (Mode Stats - Capture EGYM/BioAge) :
   }
 }
 
-CAS B (Mode Food - Assiette/Emballage) :
+CAS B (Mode Food - Assiette de nourriture ou emballage alimentaire) :
 {
   "type": "food",
   "data": {
-    "name": String (Titre du repas),
+    "name": String (Titre court et appétissant du repas),
     "ingredients": [
       {
-        "id": String (uuid),
-        "name": String,
-        "weight": Number (en g),
+        "id": String (identifiant unique court),
+        "name": String (Nom de l'aliment),
+        "weight": Number (estimation réaliste en g),
         "kcal": Number,
         "macros": { "p": Number, "c": Number, "f": Number }
       }
@@ -35,64 +38,57 @@ CAS B (Mode Food - Assiette/Emballage) :
     "totalMacros": { "p": Number, "c": Number, "f": Number }
   }
 }
+
+Ne réponds rien d'autre que le JSON. Si tu n'arrives pas à identifier, essaie de deviner au mieux.
 `;
 
 export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        const { image } = body;
+  try {
+    const body = await request.json();
+    const { image } = body; // Attendu en base64
 
-        if (!image) {
-            return NextResponse.json({ error: 'No image provided' }, { status: 400 });
-        }
-
-        console.log('Analyse multimodale de l\'image en cours...');
-
-        // === IMPLEMENTATION REELLE ===
-        // Ici, appel vers OpenAI (gpt-4o) ou Gemini (gemini-1.5-pro)
-        // en utilisant SYSTEM_PROMPT et l'image en base64.
-
-        // Simulation du LLM pour la preuve de concept :
-        await new Promise((resolve) => setTimeout(resolve, 2500));
-
-        // Mocking : On décide aléatoirement ou selon un mot-clé (si text fallback)
-        const isStatsMode = Math.random() > 0.5;
-
-        let mockResponse;
-        if (isStatsMode) {
-            mockResponse = {
-                type: 'stats',
-                data: {
-                    weight: 105.8,
-                    muscleMass: 77.1,
-                    fatPercentage: 22.5,
-                    bmr: 2040
-                }
-            };
-        } else {
-            mockResponse = {
-                type: 'food',
-                data: {
-                    name: "Salade César Premium",
-                    ingredients: [
-                        { id: "1", name: "Blanc de poulet", weight: 150, kcal: 165, macros: { p: 31, c: 0, f: 3 } },
-                        { id: "2", name: "Salade Romaine", weight: 100, kcal: 17, macros: { p: 1, c: 3, f: 0 } },
-                        { id: "3", name: "Sauce César allégée", weight: 30, kcal: 80, macros: { p: 1, c: 2, f: 8 } },
-                        { id: "4", name: "Parmesan", weight: 15, kcal: 60, macros: { p: 5, c: 0, f: 4 } }
-                    ],
-                    totalKcal: 322,
-                    totalMacros: { p: 38, c: 5, f: 15 }
-                }
-            };
-        }
-
-        return NextResponse.json({
-            success: true,
-            result: mockResponse
-        });
-
-    } catch (error) {
-        console.error('Smart Scan Error:', error);
-        return NextResponse.json({ error: 'Failed to analyze image' }, { status: 500 });
+    if (!image) {
+      return NextResponse.json({ error: 'No image provided' }, { status: 400 });
     }
+
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY is missing in environment variables');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    console.log('Analyse multimodale Gemini en cours...');
+
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+
+    // Conversion de l'image base64 pour Gemini
+    const imageParts: Part[] = [
+      {
+        inlineData: {
+          data: image.split(',')[1] || image, // Gérer le préfixe data:image/jpeg;base64,
+          mimeType: "image/jpeg",
+        },
+      },
+    ];
+
+    const result = await model.generateContent([SYSTEM_PROMPT, ...imageParts]);
+    const response = await result.response;
+    let text = response.text();
+
+    // Nettoyage du texte (parfois les LLM ajoutent ```json ... ```)
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    const jsonResult = JSON.parse(text);
+
+    return NextResponse.json({
+      success: true,
+      result: jsonResult
+    });
+
+  } catch (error) {
+    console.error('Gemini Smart Scan Error:', error);
+    return NextResponse.json({
+      error: 'Failed to analyze image',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
+  }
 }
