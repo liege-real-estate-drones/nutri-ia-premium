@@ -23,7 +23,19 @@ export type Meal = {
     date: string;
 };
 
+interface UserProfile {
+    gender: 'Male' | 'Female';
+    age: number;
+    weight: number; // kg
+    muscleMass: number; // kg
+    bmr: number; // kcal
+    goal: string;
+}
+
 interface NutriState {
+    // User Context
+    profile: UserProfile;
+
     // Goals
     goalKcal: number;
     goalMacros: Macro;
@@ -34,18 +46,31 @@ interface NutriState {
     meals: Meal[];
 
     // Actions
+    updateProfile: (updates: Partial<UserProfile>) => void;
     addMeal: (meal: Meal) => void;
     removeMeal: (mealId: string) => void;
     resetDay: () => void;
 }
 
 export const useNutriStore = create<NutriState>((set) => ({
-    goalKcal: 2500,
-    goalMacros: { p: 150, c: 250, f: 80 },
+    profile: {
+        gender: 'Male',
+        age: 45,
+        weight: 106.5,
+        muscleMass: 76.6,
+        bmr: 2025,
+        goal: 'Recomposition corporelle'
+    },
+    goalKcal: 2025,
+    goalMacros: { p: 180, c: 150, f: 75 }, // Macros indicatifs pour recomposition
 
-    consumedKcal: 1240, // Mock initial state to show gauge
-    consumedMacros: { p: 65, c: 110, f: 35 },
+    consumedKcal: 0,
+    consumedMacros: { p: 0, c: 0, f: 0 },
     meals: [],
+
+    updateProfile: (updates) => set((state) => ({
+        profile: { ...state.profile, ...updates }
+    })),
 
     addMeal: (meal) => set((state) => ({
         meals: [...state.meals, meal],

@@ -1,18 +1,18 @@
 export const theme = {
     colors: {
-        background: '#0D0D12',
-        surface: '#1E1E24',
-        surfaceHighlight: '#2A2A35',
-        primary: '#258cf4',
-        text: '#FFFFFF',
-        textSecondary: '#A0A0AB',
-        success: '#34D399',
-        warning: '#FBBF24',
-        danger: '#F87171',
-        // Macros colors
-        protein: '#a78bfa', // Purple
-        carbs: '#60a5fa',   // Blue
-        fat: '#f472b6',     // Pink
+        background: '#0a0a0a', // OLED Black
+        surface: '#171717', // Darker surface
+        surfaceHighlight: '#262626',
+        primary: '#ca8a04', // Gold Accent (from DS)
+        text: '#f5f5f5',
+        textSecondary: '#a3a3a3',
+        success: '#10b981',
+        warning: '#f59e0b',
+        danger: '#ef4444',
+        // Macros colors (vibrant for dataviz)
+        protein: '#8b5cf6', // Violet
+        carbs: '#3b82f6',   // Blue
+        fat: '#ec4899',     // Pink
     },
     typography: {
         fontFamily: 'Inter',
