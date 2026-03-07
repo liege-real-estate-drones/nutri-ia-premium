@@ -3,7 +3,7 @@ import { Meal } from '../store/useNutriStore';
 
 // === À REMPLACER PAR TON URL VERCEL ===
 // Exemple: 'https://nutri-ia-premium.vercel.app/api'
-const BACKEND_URL = 'https://VOTRE_PROJET_SUR_VERCEL.vercel.app/api';
+const BACKEND_URL = 'https://nutri-ia-premium.vercel.app/api';
 
 export const useAI = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
