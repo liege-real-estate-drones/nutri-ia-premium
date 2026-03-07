@@ -1,29 +1,58 @@
 import { useState } from 'react';
 import { Meal } from '../store/useNutriStore';
 
+// === À REMPLACER PAR TON URL VERCEL ===
+// Exemple: 'https://nutri-ia-premium.vercel.app/api'
+const BACKEND_URL = 'https://VOTRE_PROJET_SUR_VERCEL.vercel.app/api';
+
 export const useAI = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-    const scanPlate = async (imageUri?: string): Promise<Partial<Meal>> => {
+    const scanPlate = async (imageUri?: string): Promise<Partial<Meal> | null> => {
+        if (!imageUri) return null;
+
         setIsAnalyzing(true);
+        console.log("Envoi de l'image à l'IA...");
 
-        // Simulate API call delay (2 seconds)
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            // Dans Expo, il faut lire le fichier en base64 si l'URL ne permet pas de l'envoyer directement.
+            // Vu qu'on transmet du JSON simple, on va uploader l'URI sous forme base64.
+            // Pour ça, utilise expo-file-system dans l'app, ou pré-formate l'URI.
+            // === APPROCHE SIMPLIFIÉE (en attendant d'implémenter expo-file-system si besoin) ===
 
-        setIsAnalyzing(false);
+            // fetch() vers ton Vercel
+            const response = await fetch(`${BACKEND_URL}/smart-scan`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    image: imageUri // Attention: l'idéal est d'envoyer la chaine base64 de l'image ici
+                })
+            });
 
-        // Mock Response
-        return {
-            id: Math.random().toString(36).substring(7),
-            name: "Poulet Teriyaki & Riz",
-            ingredients: [
-                { id: "1", name: "Poulet", weight: 150, kcal: 240, macros: { p: 45, c: 0, f: 5 } },
-                { id: "2", name: "Riz blanc", weight: 100, kcal: 130, macros: { p: 2, c: 28, f: 0 } },
-                { id: "3", name: "Sauce Teriyaki", weight: 30, kcal: 45, macros: { p: 1, c: 10, f: 0 } }
-            ],
-            totalKcal: 415,
-            totalMacros: { p: 48, c: 38, f: 5 }
-        };
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error("Erreur Backend:", data);
+                throw new Error(data.error || 'Failed to scan');
+            }
+
+            console.log("Réponse de l'IA reçue !", data.result);
+
+            if (data.result && data.result.type === 'food') {
+                return data.result.data as Partial<Meal>;
+            }
+
+            return null;
+
+        } catch (error) {
+            console.error("Erreur de scan IA:", error);
+            alert("Erreur de connexion à l'IA. Vérifiez votre URL Vercel.");
+            return null;
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     const generateRecipe = async (prompt: string) => {
