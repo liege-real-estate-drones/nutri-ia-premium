@@ -46,6 +46,16 @@ interface NutriState {
     meals: Meal[];
 
     // Actions
+    // Synchronization
+    setProfile: (profile: UserProfile) => void;
+    setMeals: (meals: Meal[]) => void;
+
+    // Favorites
+    favorites: Meal[];
+    setFavorites: (favorites: Meal[]) => void;
+    addFavorite: (meal: Meal) => void;
+
+    // Actions
     updateProfile: (updates: Partial<UserProfile>) => void;
     addMeal: (meal: Meal) => void;
     removeMeal: (mealId: string) => void;
@@ -62,11 +72,29 @@ export const useNutriStore = create<NutriState>((set) => ({
         goal: 'Recomposition corporelle'
     },
     goalKcal: 2025,
-    goalMacros: { p: 180, c: 150, f: 75 }, // Macros indicatifs pour recomposition
+    goalMacros: { p: 180, c: 150, f: 75 },
 
     consumedKcal: 0,
     consumedMacros: { p: 0, c: 0, f: 0 },
     meals: [],
+    favorites: [],
+
+    setProfile: (profile) => set({ profile }),
+
+    setMeals: (meals) => {
+        const consumedKcal = meals.reduce((acc, current) => acc + current.totalKcal, 0);
+        const consumedMacros = meals.reduce((acc, current) => ({
+            p: acc.p + current.totalMacros.p,
+            c: acc.c + current.totalMacros.c,
+            f: acc.f + current.totalMacros.f,
+        }), { p: 0, c: 0, f: 0 });
+
+        set({ meals, consumedKcal, consumedMacros });
+    },
+
+    setFavorites: (favorites) => set({ favorites }),
+
+    addFavorite: (meal) => set((state) => ({ favorites: [...state.favorites, meal] })),
 
     updateProfile: (updates) => set((state) => ({
         profile: { ...state.profile, ...updates }
