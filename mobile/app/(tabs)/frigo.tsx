@@ -3,25 +3,52 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Activi
 import { Camera, Search, Clock, Flame } from 'lucide-react-native';
 import { theme } from '../../src/theme';
 import { useNutriStore } from '../../src/store/useNutriStore';
+import { useAI } from '../../src/hooks/useAI';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function FrigoScreen() {
-    const { goalKcal, consumedKcal } = useNutriStore();
+    const { goalKcal, consumedKcal, goalMacros, consumedMacros } = useNutriStore();
     const remainingKcal = Math.max(0, goalKcal - consumedKcal);
 
+    // On calcule les macros restantes pour les envoyer à l'IA
+    const remainingMacros = {
+        p: Math.max(0, goalMacros.p - consumedMacros.p),
+        c: Math.max(0, goalMacros.c - consumedMacros.c),
+        f: Math.max(0, goalMacros.f - consumedMacros.f),
+        kcal: remainingKcal
+    };
+
     const [ingredients, setIngredients] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const [recipes, setRecipes] = useState<any[]>([]);
 
-    const handleGenerate = () => {
-        setIsLoading(true);
-        // Simulate AI generation based on remaining Kcal
-        setTimeout(() => {
-            setRecipes([
-                { id: 1, title: 'Poulet rôti aux herbes', time: '25 min', kcal: 450 },
-                { id: 2, title: 'Bowl de quinoa et avocats', time: '15 min', kcal: 380 }
-            ]);
-            setIsLoading(false);
-        }, 1500);
+    const { isAnalyzing, generateRecipe } = useAI();
+
+    const handleGenerateText = async () => {
+        if (!ingredients.trim()) return;
+        const results = await generateRecipe(ingredients, undefined, remainingMacros);
+        if (results && results.length > 0) setRecipes(results);
+    };
+
+    const handleScanFrigo = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            alert('Désolé, nous avons besoin de la permission de la caméra pour analyser le frigo.');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.5,
+            base64: true, // On a besoin du base64 pour l'API Next.js
+        });
+
+        if (!result.canceled && result.assets[0].base64) {
+            const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+            const results = await generateRecipe(ingredients, base64Image, remainingMacros);
+            if (results && results.length > 0) setRecipes(results);
+        }
     };
 
     return (
@@ -34,7 +61,7 @@ export default function FrigoScreen() {
             <ScrollView style={styles.content}>
                 {/* Input Section */}
                 <View style={styles.inputCard}>
-                    <TouchableOpacity style={styles.scanButton} activeOpacity={0.8}>
+                    <TouchableOpacity style={styles.scanButton} onPress={handleScanFrigo} activeOpacity={0.8} disabled={isAnalyzing}>
                         <Camera color={theme.colors.surface} size={28} />
                         <Text style={styles.scanText}>Scanner le frigo</Text>
                     </TouchableOpacity>
@@ -49,14 +76,14 @@ export default function FrigoScreen() {
                             value={ingredients}
                             onChangeText={setIngredients}
                         />
-                        <TouchableOpacity style={styles.searchButton} onPress={handleGenerate}>
+                        <TouchableOpacity style={styles.searchButton} onPress={handleGenerateText} disabled={isAnalyzing}>
                             <Search color={theme.colors.primary} size={20} />
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 {/* Results Section */}
-                {isLoading ? (
+                {isAnalyzing ? (
                     <View style={styles.loader}>
                         <ActivityIndicator size="large" color={theme.colors.primary} />
                         <Text style={styles.loadingText}>Création de vos recettes sur mesure...</Text>

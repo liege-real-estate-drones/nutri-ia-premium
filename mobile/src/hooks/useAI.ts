@@ -55,14 +55,37 @@ export const useAI = () => {
         }
     };
 
-    const generateRecipe = async (prompt: string) => {
+    const generateRecipe = async (prompt: string, imageUri?: string, remainingMacros?: any) => {
         setIsAnalyzing(true);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsAnalyzing(false);
-        return [
-            { id: "r1", name: "Smoothie Protéiné", kcal: 320, time: "5 min" },
-            { id: "r2", name: "Omelette aux fines herbes", kcal: 280, time: "10 min" }
-        ];
+        console.log("Envoi au Frigo Magique...");
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/frigo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ingredientsText: prompt,
+                    imageBase64: imageUri,
+                    remainingMacros
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error("Erreur Backend Frigo:", data);
+                throw new Error(data.error || 'Failed to generate recipes');
+            }
+
+            return data.recipes || [];
+
+        } catch (error) {
+            console.error("Erreur Frigo IA:", error);
+            alert("Erreur de connexion à l'IA pour les recettes.");
+            return [];
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     return { isAnalyzing, scanPlate, generateRecipe };
