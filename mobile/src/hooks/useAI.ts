@@ -1,49 +1,32 @@
 import { useState } from 'react';
 import { Meal } from '../store/useNutriStore';
 
-// URL for API. Needs to point to localhost or physical machine IP in dev, and Vercel in prod.
-// You must set EXPO_PUBLIC_API_URL in a .env files inside the /mobile directory.
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-
 export const useAI = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-    const scanPlate = async (imageUri?: string): Promise<Partial<Meal> | null> => {
+    const scanPlate = async (imageUri?: string): Promise<Partial<Meal>> => {
         setIsAnalyzing(true);
 
-        try {
-            // Create FormData to upload an image
-            const formData = new FormData();
-            if (imageUri) {
-                // Mocking the image to upload
-                formData.append('image', {
-                    uri: imageUri,
-                    name: 'plate.jpg',
-                    type: 'image/jpeg',
-                } as any);
-            }
+        // Simulate API call delay (2 seconds)
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-            const response = await fetch(`${API_URL}/api/scan-food`, {
-                method: 'POST',
-                // Next.js route we built expects a POST, could be multipart or json depending on implementation
-            });
+        setIsAnalyzing(false);
 
-            const result = await response.json();
-            setIsAnalyzing(false);
-
-            if (result.success) {
-                return result.data;
-            }
-            return null;
-        } catch (error) {
-            console.error("Failed to scan plate via API:", error);
-            setIsAnalyzing(false);
-            return null;
-        }
+        // Mock Response
+        return {
+            id: Math.random().toString(36).substring(7),
+            name: "Poulet Teriyaki & Riz",
+            ingredients: [
+                { id: "1", name: "Poulet", weight: 150, kcal: 240, macros: { p: 45, c: 0, f: 5 } },
+                { id: "2", name: "Riz blanc", weight: 100, kcal: 130, macros: { p: 2, c: 28, f: 0 } },
+                { id: "3", name: "Sauce Teriyaki", weight: 30, kcal: 45, macros: { p: 1, c: 10, f: 0 } }
+            ],
+            totalKcal: 415,
+            totalMacros: { p: 48, c: 38, f: 5 }
+        };
     };
 
     const generateRecipe = async (prompt: string) => {
-        // This will be another API route later
         setIsAnalyzing(true);
         await new Promise(resolve => setTimeout(resolve, 2000));
         setIsAnalyzing(false);
