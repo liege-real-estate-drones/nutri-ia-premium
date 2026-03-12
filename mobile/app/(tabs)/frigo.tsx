@@ -55,7 +55,7 @@ export default function FrigoScreen() {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Frigo Magique</Text>
-                <Text style={styles.subtitle}>{remainingKcal} kcal restantes aujourd'hui</Text>
+                <Text style={styles.subtitle}>{remainingKcal} kcal restantes aujourd&apos;hui</Text>
             </View>
 
             <ScrollView style={styles.content}>

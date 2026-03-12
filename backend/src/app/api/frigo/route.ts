@@ -15,7 +15,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Clé API Gemini manquante côté serveur.' }, { status: 500 });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const parts: Part[] = [];
 
@@ -63,8 +63,9 @@ Tu dois répondre UNIQUEMENT par un tableau JSON valide, sans bloc de code markd
 
         return NextResponse.json({ success: true, recipes });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Erreur Frigo API:', error);
-        return NextResponse.json({ error: error.message || 'Failed to generate recipes' }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to generate recipes';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
