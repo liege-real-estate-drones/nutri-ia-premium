@@ -77,7 +77,7 @@ export default function DashboardScreen() {
       {/* Loading Overlay text if needed */}
       {(loading || isAnalyzing) && (
         <View style={styles.loadingOverlay}>
-          <Text style={styles.loadingText}>L'IA analyse votre assiette...</Text>
+          <Text style={styles.loadingText}>L&apos;IA analyse votre assiette...</Text>
         </View>
       )}
     </View>

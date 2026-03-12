@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Meal } from '../store/useNutriStore';
 
 // === À REMPLACER PAR TON URL VERCEL ===
@@ -8,6 +10,28 @@ const BACKEND_URL = 'https://nutri-ia-premium.vercel.app/api';
 export const useAI = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+    // Fonction utilitaire pour compresser et encoder l'image en Base64
+    const processImageToBase64 = async (uri: string): Promise<string> => {
+        try {
+            // Redimensionne l'image (max 800px de large pour réduire le poids) et la compresse (jpeg 70%)
+            const manipResult = await ImageManipulator.manipulateAsync(
+                uri,
+                [{ resize: { width: 800 } }],
+                { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+            );
+
+            // Lit le fichier compressé et l'encode en Base64
+            const base64 = await FileSystem.readAsStringAsync(manipResult.uri, {
+                encoding: 'base64', // String literal instead of missing enum
+            });
+
+            return base64;
+        } catch (error) {
+            console.error("Erreur lors de la compression de l'image:", error);
+            throw new Error("Impossible de traiter l'image.");
+        }
+    };
+
     const scanPlate = async (imageUri?: string): Promise<Partial<Meal> | null> => {
         if (!imageUri) return null;
 
@@ -15,10 +39,7 @@ export const useAI = () => {
         console.log("Envoi de l'image à l'IA...");
 
         try {
-            // Dans Expo, il faut lire le fichier en base64 si l'URL ne permet pas de l'envoyer directement.
-            // Vu qu'on transmet du JSON simple, on va uploader l'URI sous forme base64.
-            // Pour ça, utilise expo-file-system dans l'app, ou pré-formate l'URI.
-            // === APPROCHE SIMPLIFIÉE (en attendant d'implémenter expo-file-system si besoin) ===
+            const base64Image = await processImageToBase64(imageUri);
 
             // fetch() vers ton Vercel
             const response = await fetch(`${BACKEND_URL}/smart-scan`, {
@@ -27,7 +48,7 @@ export const useAI = () => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    image: imageUri // Attention: l'idéal est d'envoyer la chaine base64 de l'image ici
+                    image: base64Image
                 })
             });
 
@@ -60,12 +81,19 @@ export const useAI = () => {
         console.log("Envoi au Frigo Magique...");
 
         try {
+            let base64Image: string | undefined = undefined;
+            if (imageUri && !imageUri.startsWith('data:image')) {
+                base64Image = await processImageToBase64(imageUri);
+            } else if (imageUri) {
+                base64Image = imageUri; // Already base64 encoded from the UI
+            }
+
             const response = await fetch(`${BACKEND_URL}/frigo`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ingredientsText: prompt,
-                    imageBase64: imageUri,
+                    imageBase64: base64Image,
                     remainingMacros
                 })
             });
